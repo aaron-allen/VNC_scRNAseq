@@ -4,7 +4,9 @@
 
 library(Seurat)
 library(dplyr)
-library(Matrix)
+library(future)
+plan("multiprocess", workers = 8)
+plan()
 
 
 
@@ -26,12 +28,12 @@ AnalysisName <- paste0(
     ")_CCA(",NumberOfCCAs,
     ")_res(",ClusterResolution,
     ")_Perplex(",Perplex,
-    ")_theta(",Theta#,
-    ")_TopVarGenes"
+    ")_theta(",Theta
     )
 
 DateAndTime <- format(Sys.time(), "%Y%m%dT%H%M")
 AnalysisDir <- paste0(DateAndTime,"_",AnalysisName)
+setwd("../")
 dir.create(file.path(AnalysisDir))
 
 setwd(file.path(AnalysisDir))
@@ -52,15 +54,15 @@ FemaleVNCRep1.data <- Matrix(as.matrix(FemaleVNCRep1.data), sparse= TRUE)
 MaleVNCRep2.data <- Matrix(as.matrix(MaleVNCRep2.data), sparse= TRUE)
 FemaleVNCRep2.data <- Matrix(as.matrix(FemaleVNCRep2.data), sparse= TRUE)
 
-MaleVNCRep1 <- CreateSeuratObject(raw.data = MaleVNCRep1.data, min.cells = 3, min.genes = nGeneLowCutOff, project = "VNC")
-FemaleVNCRep1 <- CreateSeuratObject(raw.data = FemaleVNCRep1.data, min.cells = 3, min.genes = nGeneLowCutOff, project = "VNC")
-MaleVNCRep2 <- CreateSeuratObject(raw.data = MaleVNCRep2.data, min.cells = 3, min.genes = nGeneLowCutOff, project = "VNC")
-FemaleVNCRep2 <- CreateSeuratObject(raw.data = FemaleVNCRep2.data, min.cells = 3, min.genes = nGeneLowCutOff, project = "VNC")
+MaleVNCRep1 <- CreateSeuratObject(raw.data = MaleVNCRep1.data, min.cells = 3, min.genes = nGeneLowCutOff, project = "vnc")
+FemaleVNCRep1 <- CreateSeuratObject(raw.data = FemaleVNCRep1.data, min.cells = 3, min.genes = nGeneLowCutOff, project = "vnc")
+MaleVNCRep2 <- CreateSeuratObject(raw.data = MaleVNCRep2.data, min.cells = 3, min.genes = nGeneLowCutOff, project = "vnc")
+FemaleVNCRep2 <- CreateSeuratObject(raw.data = FemaleVNCRep2.data, min.cells = 3, min.genes = nGeneLowCutOff, project = "vnc")
 
-MaleVNCRep1@meta.data$Replicate <- "MaleRep1"
-MaleVNCRep2@meta.data$Replicate <- "MaleRep2"
-FemaleVNCRep1@meta.data$Replicate <- "FemaleRep1"
-FemaleVNCRep2@meta.data$Replicate <- "FemaleRep2"
+MaleVNCRep1@meta.data$Replicate <- "rep3"
+MaleVNCRep2@meta.data$Replicate <- "rep4"
+FemaleVNCRep1@meta.data$Replicate <- "rep1"
+FemaleVNCRep2@meta.data$Replicate <- "rep2"
 
 
 
@@ -96,17 +98,27 @@ FemaleVNCRep2 <- AddMetaData(object = FemaleVNCRep2, metadata = prop.mito, col.n
 MaleVNC.combined <- MergeSeurat(object1 = MaleVNCRep1, 
                                 object2 = MaleVNCRep2, 
                                 do.normalize = FALSE,
-                                add.cell.id1 = "Rep1", 
-                                add.cell.id2 = "Rep2", 
-                                project = "VNC")
+                                add.cell.id1 = "rep1", 
+                                add.cell.id2 = "rep2", 
+                                project = "vnc")
 FemaleVNC.combined <- MergeSeurat(object1 = FemaleVNCRep1, 
                                   object2 = FemaleVNCRep2,
                                   do.normalize = FALSE, 
-                                  add.cell.id1 = "Rep1", 
-                                  add.cell.id2 = "Rep2", 
-                                  project = "VNC")
-MaleVNC.combined@meta.data$Sex <- "Male"
-FemaleVNC.combined@meta.data$Sex <- "Female"
+                                  add.cell.id1 = "rep1", 
+                                  add.cell.id2 = "rep2", 
+                                  project = "vnc")
+MaleVNC.combined@meta.data$Sex <- "male"
+FemaleVNC.combined@meta.data$Sex <- "female"
+
+vnc_raw <- MergeSeurat(object1 = MaleVNC.combined, 
+                       object2 = FemaleVNC.combined,
+                       do.normalize = FALSE, 
+                       add.cell.id1 = "male1", 
+                       add.cell.id2 = "female", 
+                       project = "VNC")
+saveRDS(vnc_raw,"R_Objects/vnc_raw.rds")
+
+
 
 rm(MaleVNCRep1.data)
 rm(FemaleVNCRep1.data)
@@ -129,7 +141,7 @@ MaleVNC.combined <- FilterCells(object = MaleVNC.combined,
                                 high.thresholds = c(nGeneHighCutOff,nUMIHighCutOff,MitoHighCutOff)
 )
 MaleVNC.combined <- NormalizeData(MaleVNC.combined)
-MaleVNC.combined <- ScaleData(object = MaleVNC.combined, vars.to.regress = c("Replicate", "nUMI","prop.mito"), do.par = TRUE, num.cores = 12)
+MaleVNC.combined <- ScaleData(object = MaleVNC.combined, vars.to.regress = c("Replicate", "nUMI","prop.mito"), do.par = TRUE, num.cores = 8)
 
 
 FemaleVNC.combined <- FilterCells(object = FemaleVNC.combined, 
@@ -138,7 +150,7 @@ FemaleVNC.combined <- FilterCells(object = FemaleVNC.combined,
                                   high.thresholds = c(nGeneHighCutOff,nUMIHighCutOff,MitoHighCutOff)
 )
 FemaleVNC.combined <- NormalizeData(FemaleVNC.combined)
-FemaleVNC.combined <- ScaleData(object = FemaleVNC.combined, vars.to.regress = c("Replicate", "nUMI","prop.mito"), do.par = TRUE, num.cores = 12)
+FemaleVNC.combined <- ScaleData(object = FemaleVNC.combined, vars.to.regress = c("Replicate", "nUMI","prop.mito"), do.par = TRUE, num.cores = 8)
 ######################################
 
 
@@ -161,12 +173,12 @@ length(genes.use)
 NumberOfCCAs <- 100
 VNC.combined <- RunCCA(MaleVNC.combined, FemaleVNC.combined, genes.use = genes.use, num.cc = NumberOfCCAs, add.cell.id1 = "Male", add.cell.id2 = "Female")
 
-VNC.combined <- AlignSubspace(VNC.combined, reduction.type = "cca", grouping.var = "Sex", dims.align = 1:NumberOfCCAs, do.par = TRUE, num.cores = 12)
+VNC.combined <- AlignSubspace(VNC.combined, reduction.type = "cca", grouping.var = "Sex", dims.align = 1:NumberOfCCAs, do.par = TRUE, num.cores = 8)
 saveRDS(VNC.combined, file = "R_Objects/VNC.combined.rds")
 
 NumberOfCCAs <- 45
 VNC.combined <- RunTSNE(VNC.combined,
-                            num_threads = 12,
+                            num_threads = 8,
                             verbose = T,
                             reduction.use = "cca.aligned",
                             dims.use = 1:NumberOfCCAs,
