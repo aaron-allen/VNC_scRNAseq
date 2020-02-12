@@ -107,7 +107,7 @@ VlnPlot(object = VNC.combined, features.plot = c("nGene", "nUMI","percent.mito")
 # Figure 1-Figure supplement 2D
 genefpkm <- read_csv("flyatlas2/genefpkm.csv",col_names = FALSE)
 colnames(genefpkm) <- c("submitted_id","TissueID","FPKM","Replicate1","Replicate2","Replicate3","SD","Status")
-FBgn <- unique(genefpkm$FBgn)
+FBgn <- unique(genefpkm$submitted_id)
 write.csv(FBgn,"FBgnList.csv")
 
 FBgn_to_symbol <- read_delim("flyatlas2/FBgn_to_symbol.tsv", "\t", escape_double = FALSE, trim_ws = TRUE)
@@ -117,8 +117,6 @@ flyatlas.vns <- genefpkm %>% filter(TissueID == 7 | TissueID ==8)
 fa.vns.sym <- left_join(x = flyatlas.vns[,1:3],y = FBgn_to_symbol,by="submitted_id")
 fa.vns.sym2 <- fa.vns.sym %>% group_by(current_symbol) %>% summarize(FPKM=mean(FPKM))
 
-raw.sc.data <- data.frame(gene=VNC.combined@raw.data@Dimnames[[1]],UMI=rowSums(VNC.combined@raw.data))
-
 scGene_to_newGene <- read_delim("geneLists/scGene_to_newGene.tsv", "\t", escape_double = FALSE, trim_ws = TRUE)           # read the file in
 scGene_to_newGene <- scGene_to_newGene[- grep("D*{3}[\\]", scGene_to_newGene$current_symbol),]                  # flybase spits out some genes from other species
 scGene_to_newGene <- scGene_to_newGene[! scGene_to_newGene$current_id=="unknown ID", ]                          # remove the rows that flybase couldn't find current symbols for
@@ -126,17 +124,17 @@ scGene_to_newGene <- drop_na(scGene_to_newGene)                                 
 scGene_to_newGene <- scGene_to_newGene[! (scGene_to_newGene$current_symbol!=scGene_to_newGene$submitted_id 
                                           & duplicated(scGene_to_newGene$current_symbol)),]                     # remove rows where the input id had two ouput ids and the input and output don't match
 
-raw.sc.data <- data.frame(submitted_id=VNC.combined@data@Dimnames[[1]],UMI=rowSums(VNC.combined@data))
-raw.sc.data <- left_join(x = raw.sc.data,y = scGene_to_newGene,by = "submitted_id")
-raw.sc.data <- drop_na(raw.sc.data)
+norm.sc.data <- data.frame(submitted_id=VNC.combined@data@Dimnames[[1]], norm_exp=rowSums(VNC.combined@data))
+norm.sc.data <- left_join(x = norm.sc.data,y = scGene_to_newGene,by = "submitted_id")
+norm.sc.data <- drop_na(norm.sc.data)
 
-sc.fa2.join <- full_join(x = fa.vns.sym2,y = raw.sc.data,by = "current_symbol")
+sc.fa2.join <- full_join(x = fa.vns.sym2,y = norm.sc.data,by = "current_symbol")
 sc.fa2.join <- drop_na(sc.fa2.join)
-sc.fa2.join <- sc.fa2.join %>% filter(FPKM>0) %>% filter(UMI>0)
+sc.fa2.join <- sc.fa2.join %>% filter(FPKM>0) %>% filter(norm_exp>0)
 sc.fa2.join$FPKM <- log(sc.fa2.join$FPKM)
-sc.fa2.join$UMI <- log(sc.fa2.join$UMI)
+sc.fa2.join$norm_exp <- log(sc.fa2.join$norm_exp)
 
-ggplot(sc.fa2.join, aes(x = FPKM,y=UMI)) + 
+ggplot(sc.fa2.join, aes(x = FPKM,y=norm_exp)) + 
     geom_point() +
     geom_smooth(method=lm) +
     stat_cor(label.y = 14, size =5) +
@@ -147,25 +145,25 @@ ggplot(sc.fa2.join, aes(x = FPKM,y=UMI)) +
 
 
 # Figure 1-Figure supplement 3
-rep1 <- SubsetData(object = vnc,subset.name = "Replicate",accept.value = "FemaleRep1",subset.raw = T)
+rep1 <- SubsetData(object = VNC.combined,subset.name = "Replicate",accept.value = "FemaleRep1",subset.raw = T)
 rep1_avgexp_byclust <- AverageExpression(object = rep1,use.raw = F,show.progress = T)
 rep1_avgexp_byclust_gathered <- rep1_avgexp_byclust %>%
     rownames_to_column("gene") %>%
     gather("cluster", "expression", -gene) %>%
     add_column(replicate = "rep1")
-rep2 <- SubsetData(object = vnc,subset.name = "Replicate",accept.value = "FemaleRep2",subset.raw = T)
+rep2 <- SubsetData(object = VNC.combined,subset.name = "Replicate",accept.value = "FemaleRep2",subset.raw = T)
 rep2_avgexp_byclust <- AverageExpression(object = rep2,use.raw = F,show.progress = T)
 rep2_avgexp_byclust_gathered <- rep2_avgexp_byclust %>%
     rownames_to_column("gene") %>%
     gather("cluster", "expression", -gene) %>%
     add_column(replicate = "rep2")
-rep3 <- SubsetData(object = vnc,subset.name = "Replicate",accept.value = "MaleRep1",subset.raw = T)
+rep3 <- SubsetData(object = VNC.combined,subset.name = "Replicate",accept.value = "MaleRep1",subset.raw = T)
 rep3_avgexp_byclust <- AverageExpression(object = rep3,use.raw = F,show.progress = T)
 rep3_avgexp_byclust_gathered <- rep3_avgexp_byclust %>%
     rownames_to_column("gene") %>%
     gather("cluster", "expression", -gene) %>%
     add_column(replicate = "rep3")
-rep4 <- SubsetData(object = vnc,subset.name = "Replicate",accept.value = "MaleRep2",subset.raw = T)
+rep4 <- SubsetData(object = VNC.combined,subset.name = "Replicate",accept.value = "MaleRep2",subset.raw = T)
 rep4_avgexp_byclust <- AverageExpression(object = rep4,use.raw = F,show.progress = T)
 rep4_avgexp_byclust_gathered <- rep4_avgexp_byclust %>%
     rownames_to_column("gene") %>%
@@ -197,56 +195,68 @@ bulk_by_rep %>%
 rep1_v_rep2 <- bulk_by_rep %>% 
     ggplot(aes(x = log1p(rep1_exp),y=log1p(rep2_exp))) + 
     geom_point() +
+    coord_fixed() +
     geom_smooth(method=lm) +
     stat_cor(label.y = 14, size =5) +
     stat_regline_equation(label.y = 13, size =5) +
     ylim(0,15) +
     xlim(0,15) +
+    theme_gray() +
     theme(text = element_text(size=20))
 rep1_v_rep3 <- bulk_by_rep %>% 
     ggplot(aes(x = log1p(rep1_exp),y=log1p(rep3_exp))) + 
     geom_point() +
+    coord_fixed() +
     geom_smooth(method=lm) +
     stat_cor(label.y = 14, size =5) +
     stat_regline_equation(label.y = 13, size =5) +
     ylim(0,15) +
     xlim(0,15) +
+    theme_gray() +
     theme(text = element_text(size=20))
 rep1_v_rep4 <- bulk_by_rep %>% 
     ggplot(aes(x = log1p(rep1_exp),y=log1p(rep4_exp))) + 
     geom_point() +
+    coord_fixed() +
     geom_smooth(method=lm) +
     stat_cor(label.y = 14, size =5) +
     stat_regline_equation(label.y = 13, size =5) +
     ylim(0,15) +
     xlim(0,15) +
+    theme_gray() +
     theme(text = element_text(size=20))
 rep2_v_rep3 <- bulk_by_rep %>% 
     ggplot(aes(x = log1p(rep2_exp),y=log1p(rep3_exp))) + 
     geom_point() +
+    coord_fixed() +
     geom_smooth(method=lm) +
     stat_cor(label.y = 14, size =5) +
     stat_regline_equation(label.y = 13, size =5) +
     ylim(0,15) +
     xlim(0,15) +
+    theme_gray() +
     theme(text = element_text(size=20))
 rep2_v_rep4 <- bulk_by_rep %>% 
     ggplot(aes(x = log1p(rep2_exp),y=log1p(rep4_exp))) + 
     geom_point() +
+    coord_fixed() +
     geom_smooth(method=lm) +
     stat_cor(label.y = 14, size =5) +
     stat_regline_equation(label.y = 13, size =5) +
     ylim(0,15) +
     xlim(0,15) +
+    theme_gray() +
     theme(text = element_text(size=20))
 rep3_v_rep4 <- bulk_by_rep %>% 
     ggplot(aes(x = log1p(rep3_exp),y=log1p(rep4_exp))) + 
     geom_point() +
+    coord_fixed() +
     geom_smooth(method=lm) +
     stat_cor(label.y = 14, size = 5) +
     stat_regline_equation(label.y = 13, size =5) +
     ylim(0,15) +
     xlim(0,15) +
+    theme_gray() +
     theme(text = element_text(size=20))
 
 ggarrange(plotlist = list(rep1_v_rep2,
@@ -293,7 +303,7 @@ VNC.combined@meta.data$res.12 <- factor(VNC.combined@meta.data$res.12, levels=c(
 ggplot(VNC.combined@meta.data, aes(x=res.12, fill=Replicate)) + geom_bar(position = "fill")
 
 # Figure 1-Figure supplement 5B
-p1 <- TSNEPlot(object = vnc,
+p1 <- TSNEPlot(object = VNC.combined,
                plot.order = c("FemaleRep1"),
                do.return = T,
                group.by = "Replicate",
@@ -303,7 +313,7 @@ p1 <- TSNEPlot(object = vnc,
                no.axes = TRUE,
                do.label = FALSE,
                no.legend = TRUE)
-p2 <- TSNEPlot(object = vnc,
+p2 <- TSNEPlot(object = VNC.combined,
                plot.order = c("FemaleRep2"),
                do.return = T,
                group.by = "Replicate",
@@ -313,7 +323,7 @@ p2 <- TSNEPlot(object = vnc,
                no.axes = TRUE,
                do.label = FALSE,
                no.legend = TRUE)
-p3 <- TSNEPlot(object = vnc,
+p3 <- TSNEPlot(object = VNC.combined,
                plot.order = c("MaleRep1"),
                do.return = T,
                group.by = "Replicate",
@@ -323,7 +333,7 @@ p3 <- TSNEPlot(object = vnc,
                no.axes = TRUE,
                do.label = FALSE,
                no.legend = TRUE)
-p4 <- TSNEPlot(object = vnc,
+p4 <- TSNEPlot(object = VNC.combined,
                plot.order = c("MaleRep2"),
                do.return = T,
                group.by = "Replicate",
@@ -683,10 +693,10 @@ number_of_class_in_group <- function(object,
 
 
 
-igsf_AvgDet <- dplyr::as_tibble(t(AverageDetectionRate(object = vnc,
+igsf_AvgDet <- dplyr::as_tibble(t(AverageDetectionRate(object = VNC.combined,
                                                        thresh.min = 0))) %>%
     select(one_of(exp_igsf))
-igsf_AvgExp <- dplyr::as_tibble(t(AverageExpression(object = vnc,
+igsf_AvgExp <- dplyr::as_tibble(t(AverageExpression(object = VNC.combined,
                                                     genes.use = exp_igsf,
                                                     use.raw = T,
                                                     use.scale = F)))
@@ -721,7 +731,7 @@ igsf_big_counts_sub <- igsf_big_counts %>% filter(percent_cells < 0.6)
 igsf_big_counts_sub$percent_cells <-as.character(igsf_big_counts_sub$percent_cells) 
 
 for (umi_thresh in seq(0,8,2)) {
-    igsf_per_cell <- number_of_class_in_group(object = vnc,gene_list = igsf_list$current_symbol,accept_low = umi_thresh,use_raw = TRUE)
+    igsf_per_cell <- number_of_class_in_group(object = VNC.combined,gene_list = igsf_list$current_symbol,accept_low = umi_thresh,use_raw = TRUE)
     temp_counts <- tibble(cluster = igsf_per_cell$cell_id,
                           percent_cells = "single_cell",
                           min_UMI = umi_thresh,
@@ -739,10 +749,10 @@ ggplot(igsf_big_counts_sub, aes(x=percent_cells, y=counts, fill=min_UMI)) +
 
 
 # Figure 2-Figure supplement 6B
-gpcr_AvgDet <- dplyr::as_tibble(t(AverageDetectionRate(object = vnc,
+gpcr_AvgDet <- dplyr::as_tibble(t(AverageDetectionRate(object = VNC.combined,
                                                        thresh.min = 0))) %>%
     select(one_of(exp_gpcrs))
-gpcr_AvgExp <- dplyr::as_tibble(t(AverageExpression(object = vnc,
+gpcr_AvgExp <- dplyr::as_tibble(t(AverageExpression(object = VNC.combined,
                                                     genes.use = exp_gpcrs,
                                                     use.raw = T,
                                                     use.scale = F)))
@@ -779,7 +789,7 @@ gpcr_big_counts_sub <- gpcr_big_counts %>% filter(percent_cells < 0.6)
 gpcr_big_counts_sub$percent_cells <-as.character(gpcr_big_counts_sub$percent_cells) 
 
 for (umi_thresh in seq(0,8,2)) {
-    gpcrs_per_cell <- number_of_class_in_group(object = vnc,gene_list = gpcr_list$X1,accept_low = umi_thresh,use_raw = TRUE)
+    gpcrs_per_cell <- number_of_class_in_group(object = VNC.combined,gene_list = gpcr_list$X1,accept_low = umi_thresh,use_raw = TRUE)
     temp_counts <- tibble(cluster = gpcrs_per_cell$cell_id,
                           percent_cells = "single_cell",
                           min_UMI = umi_thresh,
@@ -800,10 +810,10 @@ ggplot(gpcr_big_counts_sub, aes(x=percent_cells, y=counts, fill=min_UMI)) +
 
 
 # Figure 2-Figure supplement 6C
-ionCh_AvgDet <- dplyr::as_tibble(t(AverageDetectionRate(object = vnc,
+ionCh_AvgDet <- dplyr::as_tibble(t(AverageDetectionRate(object = VNC.combined,
                                                         thresh.min = 0))) %>%
     select(one_of(exp_ions))
-ionCh_AvgExp <- dplyr::as_tibble(t(AverageExpression(object = vnc,
+ionCh_AvgExp <- dplyr::as_tibble(t(AverageExpression(object = VNC.combined,
                                                      genes.use = exp_ions,
                                                      use.raw = T,
                                                      use.scale = F)))
@@ -841,7 +851,7 @@ ionCh_big_counts_sub <- ionCh_big_counts %>% filter(percent_cells < 0.6)
 ionCh_big_counts_sub$percent_cells <-as.character(ionCh_big_counts_sub$percent_cells) 
 
 for (umi_thresh in seq(0,8,2)) {
-    ionCh_per_cell <- number_of_class_in_group(object = vnc,gene_list = ionCh_list$X1,accept_low = umi_thresh,use_raw = TRUE)
+    ionCh_per_cell <- number_of_class_in_group(object = VNC.combined,gene_list = ionCh_list$X1,accept_low = umi_thresh,use_raw = TRUE)
     temp_counts <- tibble(cluster = ionCh_per_cell$cell_id,
                           percent_cells = "single_cell",
                           min_UMI = umi_thresh,
@@ -862,10 +872,10 @@ ggplot(ionCh_big_counts_sub, aes(x=percent_cells, y=counts, fill=min_UMI)) +
 
 
 # Figure 2-Figure supplement 6D
-hdtf_AvgDet <- dplyr::as_tibble(t(AverageDetectionRate(object = vnc,
+hdtf_AvgDet <- dplyr::as_tibble(t(AverageDetectionRate(object = VNC.combined,
                                                        thresh.min = 0))) %>%
     select(one_of(exp_hdtfs))
-hdtf_AvgExp <- dplyr::as_tibble(t(AverageExpression(object = vnc,
+hdtf_AvgExp <- dplyr::as_tibble(t(AverageExpression(object = VNC.combined,
                                                     genes.use = exp_hdtfs,
                                                     use.raw = T,
                                                     use.scale = F)))
@@ -901,7 +911,7 @@ hdtf_big_counts_sub <- hdtf_big_counts %>% filter(percent_cells < 0.6)
 hdtf_big_counts_sub$percent_cells <-as.character(hdtf_big_counts_sub$percent_cells) 
 
 for (umi_thresh in seq(0,8,2)) {
-    hdtfs_per_cell <- number_of_class_in_group(object = vnc,gene_list = hdtfs_list$gene,accept_low = umi_thresh,use_raw = TRUE)
+    hdtfs_per_cell <- number_of_class_in_group(object = VNC.combined,gene_list = hdtfs_list$gene,accept_low = umi_thresh,use_raw = TRUE)
     temp_counts <- tibble(cluster = hdtfs_per_cell$cell_id,
                           percent_cells = "single_cell",
                           min_UMI = umi_thresh,
@@ -981,7 +991,7 @@ seuObject <- VNC.combined
 new.cluster.ids <- as_factor(seuObject@meta.data$Hox)
 seuObject <- SetIdent(object = seuObject, ident.use = new.cluster.ids)
 
-p1 <- TSNEPlot(object = vnc,
+p1 <- TSNEPlot(object = VNC.combined,
                plot.order = c("ProNm"),
                do.return = T,
                group.by = "Hox",
@@ -991,7 +1001,7 @@ p1 <- TSNEPlot(object = vnc,
                no.axes = TRUE,
                do.label = FALSE,
                no.legend = TRUE)
-p2 <- TSNEPlot(object = vnc,
+p2 <- TSNEPlot(object = VNC.combined,
                plot.order = c("MesoNm"),
                do.return = T,
                group.by = "Hox",
@@ -1001,7 +1011,7 @@ p2 <- TSNEPlot(object = vnc,
                no.axes = TRUE,
                do.label = FALSE,
                no.legend = TRUE)
-p3 <- TSNEPlot(object = vnc,
+p3 <- TSNEPlot(object = VNC.combined,
                plot.order = c("MetaNm"),
                do.return = T,
                group.by = "Hox",
@@ -1011,7 +1021,7 @@ p3 <- TSNEPlot(object = vnc,
                no.axes = TRUE,
                do.label = FALSE,
                no.legend = TRUE)
-p4 <- TSNEPlot(object = vnc,
+p4 <- TSNEPlot(object = VNC.combined,
                plot.order = c("ANm"),
                do.return = T,
                group.by = "Hox",
