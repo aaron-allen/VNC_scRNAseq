@@ -76,20 +76,11 @@ length(unique(neuron.markers$gene))
 
 
 
-# Figure 1-Figure supplement 1
-TSNEPlot(object = VNC.combined,
-         no.legend = F,
-         no.axes = T, 
-         do.label = T,
-         pt.size = 0.2,
-         coord.fixed=T
-)
-
-# Figure 1-Figure supplement 2A
+# Figure 1-Figure supplement 1A
 vnc_raw <- readRDS("R_objects/vnc_raw.rds")
 VlnPlot(object = vnc_raw,features.plot = c("nGene","nUMI","prop.mito"),point.size.use = 0,group.by = "Replicate",nCol = 3,x.lab.rot = T)
 
-# Figure 1-Figure supplement 2B
+# Figure 1-Figure supplement 1B
 cellxnUMI <- data.frame(nUMI=vnc_raw@meta.data[["nUMI"]],
                         nGene=vnc_raw@meta.data[["nGene"]])
 cellxnUMI %>%
@@ -100,11 +91,11 @@ cellxnUMI %>%
     ylim(0,4000) +
     theme_gray()
 
-# Figure 1-Figure supplement 2C
+# Figure 1-Figure supplement 1C
 VlnPlot(object = VNC.combined, features.plot = c("nGene", "nUMI","percent.mito"), nCol = 3)
 
 
-# Figure 1-Figure supplement 2D
+# Figure 1-Figure supplement 1D
 genefpkm <- read_csv("flyatlas2/genefpkm.csv",col_names = FALSE)
 colnames(genefpkm) <- c("submitted_id","TissueID","FPKM","Replicate1","Replicate2","Replicate3","SD","Status")
 FBgn <- unique(genefpkm$submitted_id)
@@ -144,7 +135,7 @@ ggplot(sc.fa2.join, aes(x = FPKM,y=norm_exp)) +
     theme(text = element_text(size=20))
 
 
-# Figure 1-Figure supplement 3
+# Figure 1-Figure supplement 2
 rep1 <- SubsetData(object = VNC.combined,subset.name = "Replicate",accept.value = "FemaleRep1",subset.raw = T)
 rep1_avgexp_byclust <- AverageExpression(object = rep1,use.raw = F,show.progress = T)
 rep1_avgexp_byclust_gathered <- rep1_avgexp_byclust %>%
@@ -279,21 +270,29 @@ ggarrange(plotlist = list(rep1_v_rep2,
 
 
 
-# Figure 1-Figure supplement 4A
+# Figure 1-Figure supplement 3A
 VNC.combined.res1 <- FindClusters(VNC.combined,reduction.type = "cca.aligned",resolution = 1,dims.use = 1:45,save.SNN = TRUE)
 TSNEPlot(VNC.combined.res1,no.legend = T,no.axes = T,pt.size = 0.1,do.label = TRUE,coord.fixed=T)
 
-# Figure 1-Figure supplement 4B
+# Figure 1-Figure supplement 3B
 VNC.combined.res3 <- FindClusters(VNC.combined,reduction.type = "cca.aligned",resolution = 6,dims.use = 1:45,save.SNN = TRUE)
 TSNEPlot(VNC.combined.res3,no.legend = T,no.axes = T,do.return = T,pt.size = 0.1,do.label = TRUE,coord.fixed=T)
 
-# Figure 1-Figure supplement 4C
+# Figure 1-Figure supplement 3C
 VNC.combined.res12 <- FindClusters(VNC.combined,reduction.type = "cca.aligned",resolution = 12,dims.use = 1:45,save.SNN = TRUE)
 TSNEPlot(VNC.combined.res12,no.legend = T,no.axes = T,do.return = T,pt.size = 0.1,do.label = TRUE,coord.fixed=T)
 
 # Figure 1-Figure supplement 4D
 clustTreePlot <- clustree(VNC.combined, prefix = "res.") + theme(legend.position = "bottom")
 
+# Figure 1-Figure supplement 4
+TSNEPlot(object = VNC.combined,
+         no.legend = F,
+         no.axes = T, 
+         do.label = T,
+         pt.size = 0.2,
+         coord.fixed=T
+)
 
 
 # Figure 1-Figure supplement 5A
@@ -436,6 +435,43 @@ FeaturePlot(object = VNC.combined,
                          no.legend = F,
                          do.return = TRUE,
                          max.cutoff = 4)
+
+
+# Figure 1-Figure supplement 7A
+FeaturePlot(object = VNC.combined,
+            no.axes = T,
+            nCol = 5,
+            coord.fixed = T,
+            pt.size = 0.1,
+            no.legend = T,
+            cols.use = c("lightgrey","black"),
+            features.plot = c("elav","nSyb","noe","repo","MRE16"))
+
+
+# Figure 1-Figure supplement 7B
+NeuronExpByCluster <- AverageExpression(object = vnc,
+										genes.use = c("noe",
+													"elav",
+													"nSyb",
+													"para",
+													"VAChT",
+													"ChAT",
+													"Gad1",
+													"VGAT",
+													"VGlut",
+													"MRE16",
+													"repo"), 
+										use.scale = T)
+pheatmap(NeuronExpByCluster,
+         breaks=seq(-2,2,0.05),
+         color = diverging_hcl(80, "Vik"),
+         border_color = NA,
+         treeheight_row = 50,
+         treeheight_col = 50,
+         cluster_rows = F,
+         cluster_cols = T,
+         fontsize = 16,
+         angle_col = 90)
 
 
 
@@ -1575,8 +1611,8 @@ GenePlot(object = seuObject,gene1 = "Gad1",gene2 = "VGlut",cell.ids = intersect(
 # Figure 7B
 FeaturePlot(object = VNC.combined,
             coord.fixed = T,
-            pt.size = 1,
-            cols.use = c("azure2","red"),
+            pt.size = 0.1,
+            cols.use = c("lightgrey","black"),
             no.axes = T,
             no.legend = F,
             min.cutoff = 0,
@@ -1799,7 +1835,6 @@ seuTest <- VNC.combined
 SubGenes <- tibble(cell = VNC.combined@data@Dimnames[[2]],
                    identity = VNC.combined@meta.data[["res.12"]])
 AllCellsandID <- SubGenes %>% 
-    select(cell,identity) %>% 
     mutate(c84 = if_else(identity == 84,"Yes","no"))
 seuTest@meta.data$c84 <- AllCellsandID$c84
 TSNEPlot(object = seuTest, group.by = "c84",no.legend = T,do.label = F, pt.size = 0.1,coord.fixed=T,no.axes = T,colors.use = c("lightgrey","black"))
@@ -1990,7 +2025,6 @@ SubGenes <- NULL
 SubGenes <- tibble(cell = seuTest@data@Dimnames[[2]],
                    identity = seuTest@meta.data[["res.12"]])
 AllCellsandID <- SubGenes %>% 
-    select(cell,identity) %>% 
     mutate(glia = if_else((identity == 23 | identity == 24 | identity == 70 | identity == 98 | identity == 106),"Yes","no"))
 seuTest@meta.data$glia <- AllCellsandID$glia
 TSNEPlot(object = seuTest, group.by = "glia",no.legend = T,do.label = F, pt.size = 0.1,coord.fixed=T,no.axes = T,colors.use = c("lightgrey","black"))
@@ -2078,33 +2112,8 @@ DotPlot(object = Glia.combined,genes.plot = top10$gene,x.lab.rot = T,plot.legend
 
 
 
+
 # Figure 9-Figure supplement 1A
-FeaturePlot(object = VNC.combined,
-            no.axes = T,
-            nCol = 5,
-            coord.fixed = T,
-            pt.size = 0.1,
-            no.legend = T,
-            cols.use = c("lightgrey","black"),
-            features.plot = c("elav","nSyb","noe","repo","MRE16"))
-
-
-# Figure 9-Figure supplement 1B
-NeuronExpByCluster <- AverageExpression(object = VNC.combined,genes.use = c("elav","nSyb","noe","MRE16","repo"), use.scale = T)
-pheatmap(NeuronExpByCluster,
-         breaks=seq(-2,2,0.05),
-         color = colorRampPalette(c("navy", "white", "firebrick3"))(80),
-         border_color = NA,
-         treeheight_row = 50,
-         treeheight_col = 50,
-         cluster_rows = T,
-         cluster_cols = T,
-         fontsize = 16,
-         angle_col = 90)
-
-
-
-# Figure 9-Figure supplement 1C
 TSNEPlot(Glia.combined,
          group.by ="Replicate",
          no.axes = T,
@@ -2114,7 +2123,7 @@ TSNEPlot(Glia.combined,
 
 
 
-# Figure 9-Figure supplement 1D
+# Figure 9-Figure supplement 1B
 rep1 <- SubsetData(object = Glia.combined,subset.name = "Replicate",accept.value = "FemaleRep1",subset.raw = T)
 rep1_avgexp_byclust <- AverageExpression(object = rep1,use.raw = F,show.progress = T)
 rep1_avgexp_byclust_gathered <- rep1_avgexp_byclust %>%
