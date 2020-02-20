@@ -9,7 +9,6 @@ library("ggpubr")
 library("circlize")
 library("eulerr")
 library("corrr")
-library("ggpubr")
 
 
 
@@ -275,7 +274,7 @@ VNC.combined.res1 <- FindClusters(VNC.combined,reduction.type = "cca.aligned",re
 TSNEPlot(VNC.combined.res1,no.legend = T,no.axes = T,pt.size = 0.1,do.label = TRUE,coord.fixed=T)
 
 # Figure 1-Figure supplement 3B
-VNC.combined.res3 <- FindClusters(VNC.combined,reduction.type = "cca.aligned",resolution = 6,dims.use = 1:45,save.SNN = TRUE)
+VNC.combined.res3 <- FindClusters(VNC.combined,reduction.type = "cca.aligned",resolution = 3,dims.use = 1:45,save.SNN = TRUE)
 TSNEPlot(VNC.combined.res3,no.legend = T,no.axes = T,do.return = T,pt.size = 0.1,do.label = TRUE,coord.fixed=T)
 
 # Figure 1-Figure supplement 3C
@@ -450,18 +449,18 @@ FeaturePlot(object = VNC.combined,
 
 # Figure 1-Figure supplement 7B
 NeuronExpByCluster <- AverageExpression(object = vnc,
-										genes.use = c("noe",
-													"elav",
-													"nSyb",
-													"para",
-													"VAChT",
-													"ChAT",
-													"Gad1",
-													"VGAT",
-													"VGlut",
-													"MRE16",
-													"repo"), 
-										use.scale = T)
+					genes.use = c("noe",
+							"elav",
+							"nSyb",
+							"para",
+							"VAChT",
+							"ChAT",
+							"Gad1",
+							"VGAT",
+							"VGlut",
+							"MRE16",
+							"repo"), 
+					use.scale = T)
 pheatmap(NeuronExpByCluster,
          breaks=seq(-2,2,0.05),
          color = diverging_hcl(80, "Vik"),
